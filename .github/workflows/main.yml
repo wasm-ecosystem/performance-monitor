@@ -31,7 +31,7 @@ jobs:
             ccache-${{ matrix.os }}-build-
       - run: npm run build
       - run: npm run setup -- ${{ github.event.issue.title }}
-      - run: npm run run
+      - run: npm run run -- ${{ github.event.issue.title }}
       - uses: peter-evans/create-pull-request@v7
         with:
           commit-message: "${{ github.event.issue.title }}\n\nfixed: #${{ github.event.issue.number }}"
