@@ -3,7 +3,10 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "watch": "tsc --watch"
+    "watch": "tsc --watch",
+    "build": "tsc",
+    "setup": "node dist/setup.js",
+    "run": "node dist/run.js"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",

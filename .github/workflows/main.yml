@@ -1,0 +1,41 @@
+name: Trigger on Issue with Tag
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  trigger_on_tag:
+    permissions:
+      contents: write
+    if: |
+      github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'trigger') ||
+      github.event.action == 'labeled' && github.event.label.name == 'trigger'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 22
+          cache: "npm"
+      - run: npm ci
+      - uses: ./.github/action/setup-ccache
+        with:
+          size: 512M
+          key: ccache-${{ runner.os }}-build-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            ccache-${{ runner.os }}-build-
+      - run: npm run build
+      - run: npm run setup -- ${{ github.event.issue.title }}
+      - run: npm run run
+      - name: commit results
+        run: |
+          set -e
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "${{ github.event.issue.title }}
+
+          fixed: #${{ github.event.issue.number }}
+          "
+          git push origin main:gh-${{ github.event.issue.number }}
