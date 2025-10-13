@@ -40,6 +40,7 @@ function generateLists(): PluginOption {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), generateLists()],
+  base: "/performance-monitor/",
   publicDir: "data",
   build: {
     outDir: "render-dist",
