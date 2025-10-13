@@ -12,7 +12,10 @@ jobs:
     if: |
       github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'trigger') ||
       github.event.action == 'labeled' && github.event.label.name == 'trigger'
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
@@ -23,15 +26,15 @@ jobs:
       - uses: ./.github/action/setup-ccache
         with:
           size: 512M
-          key: ccache-${{ runner.os }}-build-${{ hashFiles('**/CMakeLists.txt') }}
+          key: ccache-${{ matrix.os }}-build-${{ hashFiles('**/CMakeLists.txt') }}
           restore-keys: |
-            ccache-${{ runner.os }}-build-
+            ccache-${{ matrix.os }}-build-
       - run: npm run build
       - run: npm run setup -- ${{ github.event.issue.title }}
       - run: npm run run
       - uses: peter-evans/create-pull-request@v7
         with:
           commit-message: "${{ github.event.issue.title }}\n\nfixed: #${{ github.event.issue.number }}"
-          branch: gh-${{ github.event.issue.number }}
-          title: "${{ github.event.issue.title }}"
+          branch: gh-${{ matrix.os}}-${{ github.event.issue.number }}
+          title: "update date in ${{ matrix.os}} ${{ github.event.issue.title }}"
           body: "fixes: #${{ github.event.issue.number }}."

@@ -8,14 +8,10 @@ jobs:
   run-benchmark:
     strategy:
       matrix:
-        os: [
-            ubuntu-latest,
-            macos-latest,
-          ]
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
@@ -26,9 +22,9 @@ jobs:
       - uses: ./.github/action/setup-ccache
         with:
           size: 512M
-          key: ccache-${{ runner.os }}-build-${{ hashFiles('**/CMakeLists.txt') }}
+          key: ccache-${{ matrix.os }}-build-${{ hashFiles('**/CMakeLists.txt') }}
           restore-keys: |
-            ccache-${{ runner.os }}-build-
+            ccache-${{ matrix.os }}-build-
       - run: npm run build
       - run: npm run setup
       - run: npm run run
