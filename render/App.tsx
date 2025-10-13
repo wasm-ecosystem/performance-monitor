@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { LineChart, LineChartProps } from "@mui/x-charts/LineChart";
 import { Checkbox, Grid } from "@mui/material";
+import { lists } from "virtual:lists";
 
 type BenchExecuteResult = {
   time: number;
@@ -19,8 +20,7 @@ type BenchResult = {
 };
 
 async function fetchData(setData: React.Dispatch<Record<string, BenchResult[]>>) {
-  const lists = await (await fetch("/lists")).text();
-
+  console.log(lists);
   let data: Record<string, BenchResult[]> = {};
   for (const line of lists.split("\n")) {
     if (!line) continue;
@@ -28,6 +28,13 @@ async function fetchData(setData: React.Dispatch<Record<string, BenchResult[]>>)
     data[line] = res;
   }
   setData(data);
+}
+
+const platforms = ["darwin-arm64", "linux-x64"];
+const caseNames = ["parser"];
+
+function getLineKey(platform: string, caseName: string, mode: "O3" | "Oz", metric: "time" | "size") {
+  return `${platform}-${caseName}-${mode}-${metric}`;
 }
 
 function toLineChartProps(
@@ -41,46 +48,82 @@ function toLineChartProps(
 ): LineChartProps {
   if (!enableO3 && !enableOz) return { xAxis: [], series: [] };
 
-  const xAxis: string[] = [];
-  const seriesMap: Record<string, { data: number[]; label?: string }> = {};
-
-  for (const key in data) {
-    const platform = key.split("/")[0];
-    if (platform === "darwin-arm64" && !enableDarwinArm64) continue;
-    if (platform === "linux-x64" && !enableLinuxX64) continue;
-    const date = key.split("/")[1].split("-")[0];
-
-    const name = data[key][0].name;
-
-    xAxis.push(date);
-    if (enableO3) {
-      seriesMap[`${platform}-${name}-O3-time`] = seriesMap[`${platform}-${name}-O3-time`] ?? {
-        data: [],
-        label: `${platform} ${name} O3 time`,
-      };
-      seriesMap[`${platform}-${name}-O3-time`].data.push(data[key][0].results.active.O3.time);
-      seriesMap[`${platform}-${name}-O3-size`] = seriesMap[`${platform}-${name}-O3-size`] ?? {
-        data: [],
-        label: `${platform} ${name} O3 size`,
-      };
-      seriesMap[`${platform}-${name}-O3-size`].data.push(data[key][0].results.active.O3.size);
-    }
-    if (enableOz) {
-      seriesMap[`${platform}-${name}-Oz-time`] = seriesMap[`${platform}-${name}-O3-time`] ?? {
-        data: [],
-        label: `${platform} ${name} Oz time`,
-      };
-      seriesMap[`${platform}-${name}-Oz-time`].data.push(data[key][0].results.active.Oz.time);
-      seriesMap[`${platform}-${name}-Oz-size`] = seriesMap[`${platform}-${name}-O3-size`] ?? {
-        data: [],
-        label: `${platform} ${name} Oz size`,
-      };
-      seriesMap[`${platform}-${name}-Oz-size`].data.push(data[key][0].results.active.Oz.size);
+  const seriesMap: Record<string, { data: (number | null)[]; label?: string }> = {
+    baseline: { data: [], label: "baseline" },
+  };
+  for (const platform of platforms) {
+    for (const caseName of caseNames) {
+      if (platform === "darwin-arm64" && !enableDarwinArm64) continue;
+      if (platform === "linux-x64" && !enableLinuxX64) continue;
+      if (enableO3) {
+        seriesMap[getLineKey(platform, caseName, "O3", "time")] = {
+          data: [],
+          label: `${platform} ${caseName} O3 time`,
+        };
+        seriesMap[getLineKey(platform, caseName, "O3", "size")] = {
+          data: [],
+          label: `${platform} ${caseName} O3 size`,
+        };
+      }
+      if (enableOz) {
+        seriesMap[getLineKey(platform, caseName, "Oz", "time")] = {
+          data: [],
+          label: `${platform} ${caseName} Oz time`,
+        };
+        seriesMap[getLineKey(platform, caseName, "Oz", "size")] = {
+          data: [],
+          label: `${platform} ${caseName} Oz size`,
+        };
+      }
     }
   }
+  const dateSet = new Set<string>();
+  for (const key in data) {
+    const date = key.split("/")[1].split("-")[0];
+    dateSet.add(date);
+  }
+  const xAxis = Array.from(dateSet).sort();
+  const dateIndexMap: Record<string, number> = {};
+  for (let _ in seriesMap) {
+    seriesMap[_].data.length = xAxis.length;
+  }
+  xAxis.forEach((date, index) => {
+    dateIndexMap[date] = index;
+    for (let k in seriesMap) {
+      seriesMap[k].data[index] = k == "baseline" ? 1 : null;
+    }
+  });
 
+  for (const fileName in data) {
+    const platform = fileName.split("/")[0];
+    if (platform === "darwin-arm64" && !enableDarwinArm64) continue;
+    if (platform === "linux-x64" && !enableLinuxX64) continue;
+    const date = fileName.split("/")[1].split("-")[0];
+
+    const caseName = data[fileName][0].name;
+    const index = dateIndexMap[date];
+
+    if (enableO3) {
+      seriesMap[getLineKey(platform, caseName, "O3", "time")].data[index] = data[fileName][0].results.active.O3.time;
+      seriesMap[getLineKey(platform, caseName, "O3", "size")].data[index] = data[fileName][0].results.active.O3.size;
+    }
+    if (enableOz) {
+      seriesMap[getLineKey(platform, caseName, "Oz", "time")].data[index] = data[fileName][0].results.active.Oz.time;
+      seriesMap[getLineKey(platform, caseName, "Oz", "size")].data[index] = data[fileName][0].results.active.Oz.size;
+    }
+  }
   return {
-    xAxis: [{ data: xAxis }],
+    xAxis: [
+      {
+        scaleType: "band",
+        data: xAxis,
+      },
+    ],
+    yAxis: [
+      {
+        min: 0,
+      },
+    ],
     series: Object.values(seriesMap),
   };
 }

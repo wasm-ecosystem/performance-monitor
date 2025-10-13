@@ -1,17 +1,38 @@
-import { defineConfig } from "vite";
+import { defineConfig, PluginOption } from "vite";
 import react from "@vitejs/plugin-react";
+import fs from "node:fs";
+import path from "node:path";
 
-function generateLists() {
+function listAllFiles(p: string, files: string[]) {
+  for (let file of fs.readdirSync(p)) {
+    const current = path.join(p, file);
+    const stat = fs.statSync(current);
+    if (stat.isDirectory()) {
+      listAllFiles(current, files);
+    } else {
+      files.push(current);
+    }
+  }
+  return files;
+}
+
+function generateLists(): PluginOption {
+  const virtualModuleId = "virtual:lists";
+  const resolvedVirtualModuleId = "\0" + virtualModuleId;
+  const lists = listAllFiles("data", [])
+    .map((l) => l.slice("data/".length))
+    .join("\\n");
   return {
-    name: "generate-lists",
-    generateBundle() {
-      // 将JSON写入构建输出
-      this.emitFile({
-        type: "asset",
-        fileName: "lists",
-        source:
-          "darwin-arm64/250923-warpo@d1b622a+wasm-compiler@58ac45f\ndarwin-arm64/251013-warpo@b9f481a+wasm-compiler@eee82e9\nlinux-x64/250923-warpo@d1b622a+wasm-compiler@58ac45f\n",
-      });
+    name: "generate-lists-plugin",
+    resolveId(id) {
+      if (id === virtualModuleId) {
+        return resolvedVirtualModuleId;
+      }
+    },
+    load(id) {
+      if (id === resolvedVirtualModuleId) {
+        return `export const lists = "${lists}"`;
+      }
     },
   };
 }
