@@ -1,0 +1,10 @@
+/node_modules
+/dist
+/bench/build_passive
+/bench/build_passive_baseline
+/bench/build_active
+/bench/build_active_baseline
+/bench/deps/warpo
+/bench/deps/wasm-compiler
+/bench/deps/wasm-compiler-baseline
+/bench/deps/wasm-compiler-3.0.3.tar.gz

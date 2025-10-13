@@ -1,0 +1,17 @@
+{
+  "name": "performance-monitor",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "watch": "tsc --watch"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^24.7.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "assemblyscript": "0.27.37",
+    "fs-extra": "^11.3.2"
+  }
+}

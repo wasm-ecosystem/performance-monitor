@@ -1,0 +1,81 @@
+import { existsSync, readFileSync, rmSync } from "node:fs";
+import { cmd } from "../exec.js";
+
+export async function build() {
+  if (existsSync("bench/parser/out/compiler.baseline.wasm")) rmSync("bench/parser/out/compiler.baseline.wasm");
+  if (existsSync("bench/parser/out/compiler.Oz.wasm")) rmSync("bench/parser/out/compiler.Oz.wasm");
+  if (existsSync("bench/parser/out/compiler.O3.wasm")) rmSync("bench/parser/out/compiler.O3.wasm");
+  await Promise.all([
+    await cmd(
+      "node node_modules/assemblyscript/bin/asc.js bench/parser/src/glue/wasm/index.ts bench/parser/src/index-wasm.ts" +
+        " --exportRuntime" +
+        " --optimizeLevel 0 --shrinkLevel 2" +
+        " --disable nontrapping-f2i" +
+        " -o bench/parser/out/compiler.baseline.wasm",
+      {}
+    ),
+    await cmd(
+      "./bench/deps/warpo/build/warpo/warpo_asc bench/parser/src/glue/wasm/index.ts bench/parser/src/index-wasm.ts" +
+        " --exportRuntime" +
+        " --optimizeLevel 0 --shrinkLevel 2" +
+        " --disable-feature nontrapping-f2i" +
+        " -o bench/parser/out/compiler.Oz.wasm",
+      {}
+    ),
+    await cmd(
+      "./bench/deps/warpo/build/warpo/warpo_asc bench/parser/src/glue/wasm/index.ts bench/parser/src/index-wasm.ts" +
+        " --exportRuntime" +
+        " --optimizeLevel 3 --shrinkLevel 0" +
+        " --disable-feature nontrapping-f2i" +
+        " -o bench/parser/out/compiler.O3.wasm",
+      {}
+    ),
+  ]);
+}
+
+type WasmCompilerMode = "active" | "passive";
+type CaseMode = "baseline" | "Oz" | "O3";
+
+type BenchOutput = { microseconds: number; bytes: number };
+async function runBench(compiler: WasmCompilerMode, caseMode: CaseMode): Promise<BenchOutput> {
+  if (caseMode == "baseline") {
+    await cmd(`bench/build_${compiler}_baseline/parser/parser bench/parser/out/compiler.${caseMode}.wasm`, {});
+  } else {
+    await cmd(`bench/build_${compiler}/parser/parser bench/parser/out/compiler.${caseMode}.wasm`, {});
+  }
+  const r = JSON.parse(readFileSync("bench/parser/out/result.txt", "utf-8"));
+  return { microseconds: r["time(microseconds)"], bytes: r["jit_code_size(bytes)"] };
+}
+
+interface BenchResult {
+  time: number;
+  size: number;
+}
+
+type R = Record<WasmCompilerMode, Record<Exclude<CaseMode, "baseline">, BenchResult>>;
+export async function run(): Promise<R> {
+  const results: R = {
+    active: {
+      O3: { time: 0, size: 0 },
+      Oz: { time: 0, size: 0 },
+    },
+    passive: {
+      O3: { time: 0, size: 0 },
+      Oz: { time: 0, size: 0 },
+    },
+  };
+
+  const converter = (output: BenchOutput, baseline: BenchOutput): BenchResult => {
+    return { time: baseline.microseconds / output.microseconds, size: baseline.bytes / output.bytes };
+  };
+
+  const activeBaseline = await runBench("active", "baseline");
+  results["active"]["Oz"] = converter(await runBench("active", "Oz"), activeBaseline);
+  results["active"]["O3"] = converter(await runBench("active", "O3"), activeBaseline);
+
+  const passiveBaseline = await runBench("passive", "baseline");
+  results["passive"]["Oz"] = converter(await runBench("passive", "Oz"), passiveBaseline);
+  results["passive"]["O3"] = converter(await runBench("passive", "O3"), passiveBaseline);
+
+  return results;
+}
