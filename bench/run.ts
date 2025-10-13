@@ -38,7 +38,7 @@ async function main() {
     await buildBenchmark();
     await parser.build();
   }
-  const warpoSHA = (await cmdWithStdout("git rev-parse HEAD", { cwd: "bench/deps/warpo" })).trim();
+  const warpoSHA = (await cmdWithStdout("git rev-parse --short HEAD", { cwd: "bench/deps/warpo" })).trim();
   const wasmCompilerSHA = (
     await cmdWithStdout("git rev-parse --short HEAD", { cwd: "bench/deps/wasm-compiler" })
   ).trim();
