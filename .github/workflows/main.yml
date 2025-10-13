@@ -2,7 +2,7 @@ name: main
 
 on:
   issues:
-    types: [opened, labeled]
+    types: [labeled]
 
 jobs:
   run-benchmark:
