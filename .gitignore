@@ -8,3 +8,4 @@
 /bench/deps/wasm-compiler
 /bench/deps/wasm-compiler-baseline
 /bench/deps/wasm-compiler-3.0.3.tar.gz
+/build_cache
