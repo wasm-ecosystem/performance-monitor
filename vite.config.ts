@@ -43,5 +43,6 @@ export default defineConfig({
   publicDir: "data",
   build: {
     outDir: "render-dist",
+    chunkSizeWarningLimit: 1024,
   },
 });

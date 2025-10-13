@@ -7,7 +7,8 @@
     "build": "tsc",
     "setup": "node dist/setup.js",
     "run": "node dist/run.js",
-    "start": "vite"
+    "start": "vite",
+    "docs:build": "vite build"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
