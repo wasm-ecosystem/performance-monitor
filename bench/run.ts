@@ -1,9 +1,9 @@
 import { argv } from "process";
 import { cmd, cmdWithStdout } from "./exec.js";
 import * as parser from "./parser/run.js";
-import { writeFileSync } from "fs";
+import { existsSync, writeFileSync } from "fs";
 import { arch, platform } from "os";
-import { ensureDirSync } from "fs-extra";
+import { ensureDirSync, exists } from "fs-extra";
 
 async function buildBenchmark() {
   await Promise.all([
@@ -34,10 +34,6 @@ function timestampToYYMMDD(timestamp: number) {
 }
 
 async function main() {
-  if (!argv.includes("--skip-build")) {
-    await buildBenchmark();
-    await parser.build();
-  }
   const warpoSHA = (await cmdWithStdout("git rev-parse --short HEAD", { cwd: "bench/deps/warpo" })).trim();
   const wasmCompilerSHA = (
     await cmdWithStdout("git rev-parse --short HEAD", { cwd: "bench/deps/wasm-compiler" })
@@ -50,13 +46,21 @@ async function main() {
   );
   const useWarpoDate = warpoDate > wasmCompilerDate;
   const date = timestampToYYMMDD(useWarpoDate ? warpoDate : wasmCompilerDate);
+  const outputFilePath = `data/${platform()}-${arch()}/${date}-warpo@${warpoSHA}+wasm-compiler@${wasmCompilerSHA}`;
+  if (existsSync(outputFilePath) && !argv.includes("--force")) {
+    console.log(`Output file ${outputFilePath} already exists. Use --force to overwrite.`);
+    return;
+  }
+
+  if (!argv.includes("--skip-build")) {
+    await buildBenchmark();
+    await parser.build();
+  }
+
   const parserResult = await parser.run();
   const result = [{ name: "parser", results: parserResult }];
   ensureDirSync(`data/${platform()}-${arch()}`);
-  writeFileSync(
-    `data/${platform()}-${arch()}/${date}-warpo@${warpoSHA}+wasm-compiler@${wasmCompilerSHA}`,
-    JSON.stringify(result, null, 2)
-  );
+  writeFileSync(outputFilePath, JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
 }
 
