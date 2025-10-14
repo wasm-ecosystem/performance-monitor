@@ -38,13 +38,20 @@ type CaseMode = "baseline" | "Oz" | "O3";
 
 type BenchOutput = { microseconds: number; bytes: number };
 async function runBench(compiler: WasmCompilerMode, caseMode: CaseMode): Promise<BenchOutput> {
-  if (caseMode == "baseline") {
-    await cmd(`bench/build_${compiler}_baseline/parser/parser bench/parser/out/compiler.${caseMode}.wasm`, {});
-  } else {
-    await cmd(`bench/build_${compiler}/parser/parser bench/parser/out/compiler.${caseMode}.wasm`, {});
+  const CNT = 10;
+  let microseconds = 0;
+  let codeSize = 0;
+  for (let i = 0; i < CNT; i++) {
+    if (caseMode == "baseline") {
+      await cmd(`bench/build_${compiler}_baseline/parser/parser bench/parser/out/compiler.${caseMode}.wasm`, {});
+    } else {
+      await cmd(`bench/build_${compiler}/parser/parser bench/parser/out/compiler.${caseMode}.wasm`, {});
+    }
+    const r = JSON.parse(readFileSync("bench/parser/out/result.txt", "utf-8"));
+    microseconds += r["time(microseconds)"];
+    codeSize += r["jit_code_size(bytes)"];
   }
-  const r = JSON.parse(readFileSync("bench/parser/out/result.txt", "utf-8"));
-  return { microseconds: r["time(microseconds)"], bytes: r["jit_code_size(bytes)"] };
+  return { microseconds: microseconds / CNT, bytes: codeSize / CNT };
 }
 
 interface BenchResult {
