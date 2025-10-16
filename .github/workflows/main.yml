@@ -26,7 +26,7 @@ jobs:
       - uses: ./.github/action/setup-ccache
         with:
           size: 512M
-          key: ccache-${{ matrix.os }}-build-${{ hashFiles('**/CMakeLists.txt') }}
+          key: ccache-${{ matrix.os }}-build-${{ github.event.issue.number }}
           restore-keys: |
             ccache-${{ matrix.os }}-build-
       - run: npm run build
