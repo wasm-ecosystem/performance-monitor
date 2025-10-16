@@ -3,7 +3,9 @@ import { cmd, cmdWithStdout } from "./exec.js";
 import * as parser from "./parser/run.js";
 import { existsSync, writeFileSync } from "fs";
 import { arch, platform } from "os";
-import { ensureDirSync, exists } from "fs-extra";
+import { ensureDirSync } from "fs-extra";
+
+const OUTPUT_DIR = argv.includes("--daily") ? "tmp" : "data";
 
 async function buildBenchmark() {
   await Promise.all([
@@ -46,7 +48,9 @@ async function main() {
   );
   const useWarpoDate = warpoDate > wasmCompilerDate;
   const date = timestampToYYMMDD(useWarpoDate ? warpoDate : wasmCompilerDate);
-  const outputFilePath = `data/${platform()}-${arch()}/${date}-warpo@${warpoSHA}+wasm-compiler@${wasmCompilerSHA}`;
+  const outputDir = `${OUTPUT_DIR}/${platform()}-${arch()}`;
+  ensureDirSync(outputDir);
+  const outputFilePath = `${outputDir}/${date}-warpo@${warpoSHA}+wasm-compiler@${wasmCompilerSHA}`;
   if (existsSync(outputFilePath) && !argv.includes("--force")) {
     console.log(`Output file ${outputFilePath} already exists. Use --force to overwrite.`);
     return;
@@ -59,7 +63,6 @@ async function main() {
 
   const parserResult = await parser.run();
   const result = [{ name: "parser", results: parserResult }];
-  ensureDirSync(`data/${platform()}-${arch()}`);
   writeFileSync(outputFilePath, JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
 }

@@ -1,8 +1,9 @@
-name: main
+name: daily
 
 on:
   schedule:
     - cron: "0 20 * * *"
+  workflow_dispatch:
 
 jobs:
   run-benchmark:
@@ -10,8 +11,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
     runs-on: ${{ matrix.os }}
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
@@ -27,10 +26,38 @@ jobs:
             ccache-${{ matrix.os }}-build-
       - run: npm run build
       - run: npm run setup
-      - run: npm run run
+      - run: npm run run -- --daily
+      - run: tar -czf daily-${{ matrix.os }}.tar.gz ./daily
+      - uses: actions/upload-artifact@v4
+        with:
+          name: daily-results-${{ matrix.os }}
+          path: daily-${{ matrix.os }}.tar.gz
+
+  aggregate-results:
+    needs: run-benchmark
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: daily-results-ubuntu-latest
+          path: ./artifacts/ubuntu-latest
+      - uses: actions/download-artifact@v4
+        with:
+          name: daily-results-ubuntu-24.04-arm
+          path: ./artifacts/ubuntu-24.04-arm
+      - uses: actions/download-artifact@v4
+        with:
+          name: daily-results-macos-latest
+          path: ./artifacts/macos-latest
       - run: |
           set -e
+          tar -xzf ./artifacts/ubuntu-latest/daily-ubuntu-latest.tar.gz -C data --strip-components=1
+          tar -xzf ./artifacts/ubuntu-24.04-arm/daily-ubuntu-24.04-arm.tar.gz -C data --strip-components=1
+          tar -xzf ./artifacts/macos-latest/daily-macos-latest.tar.gz -C data --strip-components=1
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "daily: update benchmark results $(date)" || echo "no changes to commit"
+          git commit -m "daily benchmark results" && git push || echo "no changes to commit"
