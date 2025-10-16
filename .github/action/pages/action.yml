@@ -1,0 +1,21 @@
+name: publish pages
+description: generated resource and publish to github pages
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: npm
+    - run: npm ci
+      shell: bash
+    - run: npm run docs:build
+      shell: bash
+
+    - uses: actions/configure-pages@v5
+    - uses: actions/upload-pages-artifact@v4
+      with:
+        path: render-dist
+    - id: deployment
+      uses: actions/deploy-pages@v4
