@@ -15,6 +15,7 @@ const App = () => {
   const [enableSize, setEnableSize] = React.useState(false);
 
   const [enableTestCaseParser, setEnableTestCaseParser] = React.useState(true);
+  const [enableTestCaseTranspose, setEnableTestCaseTranspose] = React.useState(false);
 
   const [data, setData] = React.useState<Record<string, BenchResult[]>>({});
 
@@ -90,6 +91,15 @@ const App = () => {
           />
           <span>01_parser</span>
         </Grid>
+        <Grid>
+          <Checkbox
+            checked={enableTestCaseTranspose}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>, checked: boolean) =>
+              setEnableTestCaseTranspose(checked)
+            }
+          />
+          <span>01_parser</span>
+        </Grid>
       </Grid>
       <LineChart
         {...toLineChartProps(data, {
@@ -102,6 +112,7 @@ const App = () => {
           enableSize,
 
           enableTestCaseParser,
+          enableTestCaseTranspose,
         })}
         height={300}
       />

@@ -1,6 +1,7 @@
 import { argv } from "process";
 import { cmd, cmdWithStdout } from "./exec.js";
 import * as parser from "./parser/run.js";
+import * as transpose from "./transpose/run.js";
 import { existsSync, writeFileSync } from "fs";
 import { arch, platform } from "os";
 import { ensureDirSync } from "fs-extra";
@@ -60,10 +61,15 @@ async function main() {
   if (!argv.includes("--skip-build")) {
     await buildBenchmark();
     await parser.build();
+    await transpose.build();
   }
 
   const parserResult = await parser.run();
-  const result = [{ name: "parser", results: parserResult }];
+  const transposeResult = await transpose.run();
+  const result = [
+    { name: "parser", results: parserResult },
+    { name: "transpose", results: transposeResult },
+  ];
   writeFileSync(outputFilePath, JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
 }

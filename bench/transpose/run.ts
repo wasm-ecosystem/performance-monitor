@@ -2,32 +2,32 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { cmd } from "../exec.js";
 
 export async function build() {
-  if (existsSync("bench/parser/out/compiler.baseline.wasm")) rmSync("bench/parser/out/compiler.baseline.wasm");
-  if (existsSync("bench/parser/out/compiler.Oz.wasm")) rmSync("bench/parser/out/compiler.Oz.wasm");
-  if (existsSync("bench/parser/out/compiler.O3.wasm")) rmSync("bench/parser/out/compiler.O3.wasm");
+  if (existsSync("bench/transpose/out/transpose.baseline.wasm")) rmSync("bench/transpose/out/transpose.baseline.wasm");
+  if (existsSync("bench/transpose/out/transpose.Oz.wasm")) rmSync("bench/transpose/out/transpose.Oz.wasm");
+  if (existsSync("bench/transpose/out/transpose.O3.wasm")) rmSync("bench/transpose/out/transpose.O3.wasm");
   await Promise.all([
     await cmd(
-      "node node_modules/assemblyscript/bin/asc.js bench/parser/src/glue/wasm/index.ts bench/parser/src/index-wasm.ts" +
+      "node node_modules/assemblyscript/bin/asc.js bench/transpose/src/index.ts" +
         " --exportRuntime" +
         " --optimizeLevel 0 --shrinkLevel 2" +
         " --disable nontrapping-f2i" +
-        " -o bench/parser/out/compiler.baseline.wasm",
+        " -o bench/transpose/out/transpose.baseline.wasm",
       {}
     ),
     await cmd(
-      "./bench/deps/warpo/build/warpo/warpo_asc bench/parser/src/glue/wasm/index.ts bench/parser/src/index-wasm.ts" +
+      "./bench/deps/warpo/build/warpo/warpo_asc bench/transpose/src/index.ts" +
         " --exportRuntime" +
         " --optimizeLevel 0 --shrinkLevel 2" +
         " --disable-feature nontrapping-f2i" +
-        " -o bench/parser/out/compiler.Oz.wasm",
+        " -o bench/transpose/out/transpose.Oz.wasm",
       {}
     ),
     await cmd(
-      "./bench/deps/warpo/build/warpo/warpo_asc bench/parser/src/glue/wasm/index.ts bench/parser/src/index-wasm.ts" +
+      "./bench/deps/warpo/build/warpo/warpo_asc bench/transpose/src/index.ts" +
         " --exportRuntime" +
         " --optimizeLevel 3 --shrinkLevel 0" +
         " --disable-feature nontrapping-f2i" +
-        " -o bench/parser/out/compiler.O3.wasm",
+        " -o bench/transpose/out/transpose.O3.wasm",
       {}
     ),
   ]);
@@ -43,11 +43,14 @@ async function runBench(compilerMode: WasmCompilerMode, caseMode: CaseMode): Pro
   let codeSize = 0;
   for (let i = 0; i < CNT; i++) {
     if (caseMode == "baseline") {
-      await cmd(`bench/build_${compilerMode}_baseline/parser/parser bench/parser/out/compiler.${caseMode}.wasm`, {});
+      await cmd(
+        `bench/build_${compilerMode}_baseline/transpose/transpose bench/transpose/out/transpose.${caseMode}.wasm`,
+        {}
+      );
     } else {
-      await cmd(`bench/build_${compilerMode}/parser/parser bench/parser/out/compiler.${caseMode}.wasm`, {});
+      await cmd(`bench/build_${compilerMode}/transpose/transpose bench/transpose/out/transpose.${caseMode}.wasm`, {});
     }
-    const r = JSON.parse(readFileSync("bench/parser/out/result.txt", "utf-8"));
+    const r = JSON.parse(readFileSync("bench/transpose/out/result.txt", "utf-8"));
     microseconds += r["time(microseconds)"];
     codeSize += r["jit_code_size(bytes)"];
   }

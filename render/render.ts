@@ -47,6 +47,7 @@ export function toLineChartProps(
     enablePerformance,
     enableSize,
     enableTestCaseParser,
+    enableTestCaseTranspose,
   }: {
     enableDarwinArm64: boolean;
     enableLinuxX64: boolean;
@@ -56,6 +57,7 @@ export function toLineChartProps(
     enablePerformance: boolean;
     enableSize: boolean;
     enableTestCaseParser: boolean;
+    enableTestCaseTranspose: boolean;
   }
 ): LineChartProps {
   const isPlatformDisabled = (platform: string) => {
@@ -66,7 +68,7 @@ export function toLineChartProps(
     );
   };
   const isTestCaseDisabled = (caseName: string) => {
-    return caseName === "parser" && !enableTestCaseParser;
+    return (caseName === "parser" && !enableTestCaseParser) || (caseName === "transpose" && !enableTestCaseTranspose);
   };
 
   if (!enableDarwinArm64 && !enableLinuxX64 && !enableLinuxArm64) return { xAxis: [], series: [] };
