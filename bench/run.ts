@@ -51,8 +51,9 @@ async function main() {
   const outputDir = `${OUTPUT_DIR}/${platform()}-${arch()}`;
   ensureDirSync(outputDir);
   const outputFilePath = `${outputDir}/${date}-warpo@${warpoSHA}+wasm-compiler@${wasmCompilerSHA}`;
-  if (existsSync(outputFilePath) && !argv.includes("--force")) {
-    console.log(`Output file ${outputFilePath} already exists. Use --force to overwrite.`);
+  const dataFilePath = `data/${date}-warpo@${warpoSHA}+wasm-compiler@${wasmCompilerSHA}`;
+  if (existsSync(dataFilePath) && !argv.includes("--force")) {
+    console.log(`Output file ${dataFilePath} already exists. Use --force to overwrite.`);
     return;
   }
 
