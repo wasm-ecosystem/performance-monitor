@@ -32,8 +32,8 @@ export async function fetchData(setData: React.Dispatch<Record<string, BenchResu
 const platforms = ["darwin-arm64", "linux-x64", "linux-arm64"];
 const caseNames = ["parser"];
 
-function getLineKey(platform: string, caseName: string, mode: "O3" | "Oz", metric: "time" | "size") {
-  return `${platform}-${caseName}-${mode}-${metric}`;
+function getLineKey(platform: string, mode: "O3" | "Oz", metric: "time" | "size") {
+  return `${platform}-${mode}-${metric}`;
 }
 
 export function toLineChartProps(
@@ -46,6 +46,7 @@ export function toLineChartProps(
     enableOz,
     enablePerformance,
     enableSize,
+    enableTestCaseParser,
   }: {
     enableDarwinArm64: boolean;
     enableLinuxX64: boolean;
@@ -54,6 +55,7 @@ export function toLineChartProps(
     enableOz: boolean;
     enablePerformance: boolean;
     enableSize: boolean;
+    enableTestCaseParser: boolean;
   }
 ): LineChartProps {
   const isPlatformDisabled = (platform: string) => {
@@ -63,56 +65,75 @@ export function toLineChartProps(
       (platform === "linux-arm64" && !enableLinuxArm64)
     );
   };
+  const isTestCaseDisabled = (caseName: string) => {
+    return caseName === "parser" && !enableTestCaseParser;
+  };
 
   if (!enableDarwinArm64 && !enableLinuxX64 && !enableLinuxArm64) return { xAxis: [], series: [] };
   if (!enableO3 && !enableOz) return { xAxis: [], series: [] };
   if (!enablePerformance && !enableSize) return { xAxis: [], series: [] };
+  if (!enableTestCaseParser) return { xAxis: [], series: [] };
 
   const seriesMap: Record<string, { data: (number | null)[]; label?: string }> = {
     baseline: { data: [], label: "baseline" },
   };
   for (const platform of platforms) {
     if (isPlatformDisabled(platform)) continue;
-    for (const caseName of caseNames) {
-      if (enableO3) {
-        if (enablePerformance) {
-          seriesMap[getLineKey(platform, caseName, "O3", "time")] = {
-            data: [],
-            label: `${platform} ${caseName} O3 time`,
-          };
-        }
-        if (enableSize) {
-          seriesMap[getLineKey(platform, caseName, "O3", "size")] = {
-            data: [],
-            label: `${platform} ${caseName} O3 size`,
-          };
-        }
+    if (enableO3) {
+      if (enablePerformance) {
+        seriesMap[getLineKey(platform, "O3", "time")] = {
+          data: [],
+          label: `${platform} O3 time`,
+        };
       }
-      if (enableOz) {
-        if (enablePerformance) {
-          seriesMap[getLineKey(platform, caseName, "Oz", "time")] = {
-            data: [],
-            label: `${platform} ${caseName} Oz time`,
-          };
-        }
-        if (enableSize) {
-          seriesMap[getLineKey(platform, caseName, "Oz", "size")] = {
-            data: [],
-            label: `${platform} ${caseName} Oz size`,
-          };
-        }
+      if (enableSize) {
+        seriesMap[getLineKey(platform, "O3", "size")] = {
+          data: [],
+          label: `${platform} O3 size`,
+        };
+      }
+    }
+    if (enableOz) {
+      if (enablePerformance) {
+        seriesMap[getLineKey(platform, "Oz", "time")] = {
+          data: [],
+          label: `${platform} Oz time`,
+        };
+      }
+      if (enableSize) {
+        seriesMap[getLineKey(platform, "Oz", "size")] = {
+          data: [],
+          label: `${platform} Oz size`,
+        };
       }
     }
   }
+
+  const getDate = (fileName: string) => {
+    return fileName.split("/")[1].split("-")[0];
+  };
+  const getPlatform = (fileName: string) => {
+    return fileName.split("/")[0];
+  };
+
   const dateSet = new Set<string>();
-  for (const key in data) {
-    const date = key.split("/")[1].split("-")[0];
+  for (const fileName in data) {
+    let hasMissingCases = false;
+    for (const caseObj of data[fileName]) {
+      const caseName = caseObj.name;
+      if (isTestCaseDisabled(caseName)) {
+        hasMissingCases = true;
+        break;
+      }
+    }
+    if (hasMissingCases) continue;
+    const date = getDate(fileName);
     dateSet.add(date);
   }
   const xAxis = Array.from(dateSet).sort();
   const dateIndexMap: Record<string, number> = {};
-  for (let _ in seriesMap) {
-    seriesMap[_].data.length = xAxis.length;
+  for (const lineKey in seriesMap) {
+    seriesMap[lineKey].data.length = xAxis.length;
   }
   xAxis.forEach((date, index) => {
     dateIndexMap[date] = index;
@@ -122,24 +143,40 @@ export function toLineChartProps(
   });
 
   for (const fileName in data) {
-    const platform = fileName.split("/")[0];
+    const platform = getPlatform(fileName);
     if (isPlatformDisabled(platform)) continue;
-    const date = fileName.split("/")[1].split("-")[0];
-
-    const caseName = data[fileName][0].name;
+    const date = getDate(fileName);
     const index = dateIndexMap[date];
 
+    const update = (mode: "O3" | "Oz", metric: "time" | "size") => {
+      const lineKey = getLineKey(platform, mode, metric);
+      seriesMap[lineKey].data[index] = 0;
+      let total = 0;
+      let cnt = 0;
+      for (const caseObj of data[fileName]) {
+        const caseName = caseObj.name;
+        if (isTestCaseDisabled(caseName)) continue;
+        total += caseObj.results.active[mode][metric];
+        cnt++;
+      }
+      seriesMap[lineKey].data[index] = total / cnt;
+    };
+
     if (enableO3) {
-      if (enablePerformance)
-        seriesMap[getLineKey(platform, caseName, "O3", "time")].data[index] = data[fileName][0].results.active.O3.time;
-      if (enableSize)
-        seriesMap[getLineKey(platform, caseName, "O3", "size")].data[index] = data[fileName][0].results.active.O3.size;
+      if (enablePerformance) {
+        update("O3", "time");
+      }
+      if (enableSize) {
+        update("O3", "size");
+      }
     }
     if (enableOz) {
-      if (enablePerformance)
-        seriesMap[getLineKey(platform, caseName, "Oz", "time")].data[index] = data[fileName][0].results.active.Oz.time;
-      if (enableSize)
-        seriesMap[getLineKey(platform, caseName, "Oz", "size")].data[index] = data[fileName][0].results.active.Oz.size;
+      if (enablePerformance) {
+        update("Oz", "time");
+      }
+      if (enableSize) {
+        update("Oz", "size");
+      }
     }
   }
   return {

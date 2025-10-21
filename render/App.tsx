@@ -14,6 +14,8 @@ const App = () => {
   const [enablePerformance, setEnablePerformance] = React.useState(true);
   const [enableSize, setEnableSize] = React.useState(false);
 
+  const [enableTestCaseParser, setEnableTestCaseParser] = React.useState(true);
+
   const [data, setData] = React.useState<Record<string, BenchResult[]>>({});
 
   useEffect(() => {
@@ -36,7 +38,7 @@ const App = () => {
             onChange={(event: React.ChangeEvent<HTMLInputElement>, checked: boolean) => setEnableLinuxX64(checked)}
           />
           <span>linux-x64</span>
-        </Grid>{" "}
+        </Grid>
         <Grid>
           <Checkbox
             checked={enableLinuxArm64}
@@ -77,6 +79,18 @@ const App = () => {
           <span>jit size</span>
         </Grid>
       </Grid>
+      <h3>test cases</h3>
+      <Grid container spacing={2}>
+        <Grid>
+          <Checkbox
+            checked={enableTestCaseParser}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>, checked: boolean) =>
+              setEnableTestCaseParser(checked)
+            }
+          />
+          <span>01_parser</span>
+        </Grid>
+      </Grid>
       <LineChart
         {...toLineChartProps(data, {
           enableDarwinArm64,
@@ -86,6 +100,8 @@ const App = () => {
           enableOz,
           enablePerformance,
           enableSize,
+
+          enableTestCaseParser,
         })}
         height={300}
       />
