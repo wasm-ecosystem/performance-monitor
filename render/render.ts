@@ -1,5 +1,5 @@
 ///<reference types="./index.d.ts" />
-import { LineChartProps } from "@mui/x-charts/LineChart";
+import { LineChartProps, LineSeries } from "@mui/x-charts/LineChart";
 import { lists } from "virtual:lists";
 
 type BenchExecuteResult = {
@@ -36,6 +36,7 @@ function getLineKey(platform: string, mode: "O3" | "Oz", metric: "time" | "size"
   return `${platform}-${mode}-${metric}`;
 }
 
+type LineSeriesBuilder = Omit<LineSeries, "data"> & { data: (number | null)[] };
 export function toLineChartProps(
   data: Record<string, BenchResult[]>,
   {
@@ -77,9 +78,7 @@ export function toLineChartProps(
   if (!enableO3 && !enableOz) return { xAxis: [], series: [] };
   if (!enablePerformance && !enableSize) return { xAxis: [], series: [] };
 
-  const seriesMap: Record<string, { data: (number | null)[]; label?: string }> = {
-    baseline: { data: [], label: "baseline" },
-  };
+  const seriesMap: Record<string, LineSeriesBuilder> = {};
   for (const platform of platforms) {
     if (isPlatformDisabled(platform)) continue;
     if (enableO3) {
@@ -87,12 +86,14 @@ export function toLineChartProps(
         seriesMap[getLineKey(platform, "O3", "time")] = {
           data: [],
           label: `${platform} O3 time`,
+          id: getLineKey(platform, "O3", "time"),
         };
       }
       if (enableSize) {
         seriesMap[getLineKey(platform, "O3", "size")] = {
           data: [],
           label: `${platform} O3 size`,
+          id: getLineKey(platform, "O3", "size"),
         };
       }
     }
@@ -101,12 +102,14 @@ export function toLineChartProps(
         seriesMap[getLineKey(platform, "Oz", "time")] = {
           data: [],
           label: `${platform} Oz time`,
+          id: getLineKey(platform, "Oz", "time"),
         };
       }
       if (enableSize) {
         seriesMap[getLineKey(platform, "Oz", "size")] = {
           data: [],
           label: `${platform} Oz size`,
+          id: getLineKey(platform, "Oz", "size"),
         };
       }
     }
@@ -178,7 +181,7 @@ export function toLineChartProps(
     ],
     yAxis: [
       {
-        min: 0,
+        min: 1,
       },
     ],
     series: Object.values(seriesMap),

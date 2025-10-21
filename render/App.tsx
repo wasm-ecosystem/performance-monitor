@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { LineChart } from "@mui/x-charts/LineChart";
+import { LineChart, lineElementClasses } from "@mui/x-charts/LineChart";
 import { Checkbox, Grid } from "@mui/material";
 import { fetchData, BenchResult, toLineChartProps } from "./render";
 
@@ -116,6 +116,7 @@ const App = () => {
         })}
         height={300}
       />
+      <p>higher is better, baseline is 1</p>
     </div>
   );
 };
