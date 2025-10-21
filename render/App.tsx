@@ -98,7 +98,7 @@ const App = () => {
               setEnableTestCaseTranspose(checked)
             }
           />
-          <span>01_parser</span>
+          <span>02_transpose</span>
         </Grid>
       </Grid>
       <LineChart

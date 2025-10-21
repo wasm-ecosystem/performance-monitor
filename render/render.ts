@@ -70,11 +70,12 @@ export function toLineChartProps(
   const isTestCaseDisabled = (caseName: string) => {
     return (caseName === "parser" && !enableTestCaseParser) || (caseName === "transpose" && !enableTestCaseTranspose);
   };
+  const enabledTestCaseCount = (enableTestCaseParser ? 1 : 0) + (enableTestCaseTranspose ? 1 : 0);
+  if (enabledTestCaseCount === 0) return { xAxis: [], series: [] };
 
   if (!enableDarwinArm64 && !enableLinuxX64 && !enableLinuxArm64) return { xAxis: [], series: [] };
   if (!enableO3 && !enableOz) return { xAxis: [], series: [] };
   if (!enablePerformance && !enableSize) return { xAxis: [], series: [] };
-  if (!enableTestCaseParser) return { xAxis: [], series: [] };
 
   const seriesMap: Record<string, { data: (number | null)[]; label?: string }> = {
     baseline: { data: [], label: "baseline" },
@@ -119,19 +120,8 @@ export function toLineChartProps(
   };
 
   const dateSet = new Set<string>();
-  for (const fileName in data) {
-    let hasMissingCases = false;
-    for (const caseObj of data[fileName]) {
-      const caseName = caseObj.name;
-      if (isTestCaseDisabled(caseName)) {
-        hasMissingCases = true;
-        break;
-      }
-    }
-    if (hasMissingCases) continue;
-    const date = getDate(fileName);
-    dateSet.add(date);
-  }
+  for (const fileName in data) dateSet.add(getDate(fileName));
+
   const xAxis = Array.from(dateSet).sort();
   const dateIndexMap: Record<string, number> = {};
   for (const lineKey in seriesMap) {
@@ -152,7 +142,6 @@ export function toLineChartProps(
 
     const update = (mode: "O3" | "Oz", metric: "time" | "size") => {
       const lineKey = getLineKey(platform, mode, metric);
-      seriesMap[lineKey].data[index] = 0;
       let total = 0;
       let cnt = 0;
       for (const caseObj of data[fileName]) {
@@ -161,9 +150,8 @@ export function toLineChartProps(
         total += caseObj.results.active[mode][metric];
         cnt++;
       }
-      seriesMap[lineKey].data[index] = total / cnt;
+      seriesMap[lineKey].data[index] = enabledTestCaseCount !== cnt ? null : total / cnt;
     };
-
     if (enableO3) {
       if (enablePerformance) {
         update("O3", "time");
