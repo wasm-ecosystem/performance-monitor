@@ -20,12 +20,14 @@ export type BenchResult = {
 
 export async function fetchData(setData: React.Dispatch<Record<string, BenchResult[]>>) {
   console.log(lists);
-  let data: Record<string, BenchResult[]> = {};
-  for (const line of lists.split("\n")) {
-    if (!line) continue;
-    const res = await (await fetch(line)).json();
-    data[line] = res;
-  }
+  const data: Record<string, BenchResult[]> = {};
+  const urls = lists.split("\n").filter((line) => line);
+  await Promise.all(
+    urls.map(async (url) => {
+      const res = await (await fetch(url)).json();
+      data[url] = res;
+    })
+  );
   setData(data);
 }
 
